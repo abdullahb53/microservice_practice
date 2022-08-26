@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "/golang_service/genpb/golang_service_adder";
+
+message NewItem{
+    string id = 1;
+    string itemName = 2;
+}
+
+message ResponseValue{
+    string response=1;
+}
+
+
+service Events{
+    rpc AddItem(NewItem) returns (ResponseValue){}
+}

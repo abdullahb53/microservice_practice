@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "/python_service/genpb/python_service_delete";
+
+message Item{
+    string id = 1;
+}
+
+message ResponseValue{
+    string response=1;
+}
+
+
+service Events{
+    rpc ListOneItem(Item) returns (ResponseValue){}
+}

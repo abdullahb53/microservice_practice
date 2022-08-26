@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+
+## Build stage
+FROM golang:1.19.0-alpine3.15 AS build
+
+RUN mkdir /app
+
+ADD . /app
+
+WORKDIR /app
+
+RUN go build -o main ./src
+
+EXPOSE 8080
+
+CMD ["/app/main"]
+
+
+# FROM golang:1.19.0-alpine3.15 AS build
+
+# WORKDIR /app
+
+# COPY go.* ./
+
+# RUN go mod download
+
+# COPY . .
+
+# RUN go build -v -o golang_service ./src
+
+# ## Run stage
+# FROM debian:buster-slim
+# RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+#     ca-certificates && \
+#     rm -rf /var/lib/apt/lists/*
+
+
+# COPY --from=builder /app/golang_service /app/golang_service
+
+
+# EXPOSE 8080
+
+
+
+# CMD ["/app/server"]
+# ##docker build -t golang_service:multistage -f Dockerfile.multistage .
