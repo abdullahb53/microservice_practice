@@ -6,9 +6,13 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	genpb "github.com/abdullahb53/microservices_practice/genpb/golang_service_adder"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"google.golang.org/grpc/reflection"
 
 	"google.golang.org/grpc"
@@ -18,6 +22,41 @@ import (
 - MONGO_INITDB_ROOT_USERNAME=citizix
   - MONGO_INITDB_ROOT_PASSWORD=S3cret
 */
+
+var (
+	itemsCollection *mongo.Collection
+	client          *mongo.Client
+)
+
+func init() {
+	// create new client. (*mongo.Client)
+	var err error
+	client, err = mongo.NewClient(options.Client().ApplyURI("mongodb://citizix:S3cret@localhost:27017"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	// try to connect client. -> (*mongo.Client)
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatalf("client.Connect(ctx) failed:,%v", err)
+	}
+
+	// ping to Mongo DB server.
+	if err = client.Ping(ctx, readpref.Primary()); err != nil {
+		// Can't connect to Mongo server
+		log.Fatalf("Cannot connect mongo server:%v", err)
+	}
+	print("Connected to Mongo DB Server\n")
+
+	// get database and collection.
+	quickstartDatabase := client.Database("itemsDB")
+	itemsCollection = quickstartDatabase.Collection("itemsCollection")
+
+}
+
 func main() {
 	// context
 	_ = context.Background()
@@ -34,7 +73,7 @@ func main() {
 		log.Fatalf("failed to listen:%s:%v", listenAddr, port)
 	}
 
-	GetMongoDBCli()
+	// GetMongoDBCli()
 
 	// gRPC server
 	eventServer := new(myEventServer)
@@ -51,28 +90,25 @@ type myEventServer struct {
 	genpb.UnimplementedEventsServer
 }
 
-var (
-	client     *mongo.Client
-	collection *mongo.Collection
-)
-
+// Add item func impl.
 func (m myEventServer) AddItem(ctx context.Context, item *genpb.NewItem) (*genpb.ResponseValue, error) {
 	var response string
+	var err error
+	//---------------------------------------------
+	// DB ADD TO COLLECTION -> (itemsCollection)---
+	// insert one item to mongo db collection/table.
+	_, err = itemsCollection.InsertOne(ctx, bson.D{
+		{Key: item.Id, Value: item.ItemName},
+	})
+	if err != nil {
+		log.Fatalf("itemsCollection add failed(mongo db):%v", err)
+	}
+	fmt.Println("------------------------")
+	fmt.Println("-mongodb insert success-")
+	fmt.Println("------------------------")
+	fmt.Println("item.Id:[", item.Id, "]\n", "item.ItemName:[", item.ItemName, "]")
 
-	// err := client.Connect(ctx)
-	// if err != nil {
-	// 	log.Fatalf("MongoDB connection failed:%v", err)
-	// }
-	// defer client.Disconnect(ctx)
-
-	// res, err := collection.InsertOne(ctx, bson.M{item.Id: item.ItemName})
-	// if err != nil {
-	// 	log.Fatalf("mongodb insertion failed:%v", err)
-	// 	response = "failed"
-
-	// }
-	// id := res.InsertedID
-	// fmt.Println("inserted ID", id, "item ID:", item.Id, "item Name:", item.ItemName)
+	// response value.
 	response = "success"
 	return &genpb.ResponseValue{
 		Response: response,
